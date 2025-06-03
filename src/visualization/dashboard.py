@@ -751,5 +751,8 @@ def update_dashboard(pair, timeframe, n, n_clicks_calc, n_clicks_update, balance
         logger.error(f"Dashboard error: {e}")
         return {}, {}, f"Error: {e}", f"Error: {e}", html.Div(f"Error: {str(e)}"), 'Error', 'Error', 'Error', 'Error'
 
+# Create server variable for deployment
+server = app.server
+
 if __name__ == '__main__':
-    app.run_server(debug=True) 
+    app.run_server(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8050))) 
