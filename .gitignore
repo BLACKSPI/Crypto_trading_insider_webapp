@@ -29,6 +29,7 @@ ENV/
 
 # Ignore confidential reports
 REPORT.md
+PROJECT_DOCUMENTATION.txt
 
 # Python
 *pycacache_/
