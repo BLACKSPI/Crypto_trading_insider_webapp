@@ -2,14 +2,27 @@
   command = """
     python -m pip install --upgrade pip
     pip install -r requirements.txt
+    mkdir -p data/cache
   """
   publish = "src/visualization"
   functions = "netlify/functions"
 
 [build.environment]
   PYTHON_VERSION = "3.11"
+  PYTHONPATH = "src"
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["dash", "plotly"]
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
-  status = 200 
+  status = 200
+
+[dev]
+  command = "python src/visualization/dashboard.py"
+  port = 8050
+  targetPort = 8050
+  publish = "src/visualization"
+  autoLaunch = true 

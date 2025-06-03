@@ -16,15 +16,17 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from collectors.crypto_collector import CryptoDataCollector
 from risk_management import RiskManager
 from ml_models import CryptoMLModels
+from cache_manager import CacheManager
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize the data collector, risk manager, and ML models
+# Initialize components
 collector = CryptoDataCollector()
 risk_manager = RiskManager()
 ml_models = CryptoMLModels()
+cache_manager = CacheManager()
 
 def identify_trading_points(df: pd.DataFrame) -> pd.DataFrame:
     """Identify entry and exit points based on technical indicators"""
@@ -307,8 +309,17 @@ app.layout = html.Div([
 )
 def update_dashboard(pair, timeframe, n, n_clicks_calc, n_clicks_update, balance, risk_percent, sl_percent, tp_percent):
     try:
-        # Get data
-        df = collector.get_historical_data(pair=pair, period='30d', interval=timeframe)
+        # Try to get cached data first
+        cache_key = f"{pair}_{timeframe}"
+        df = cache_manager.get_cached_data(cache_key)
+        
+        # If no cached data or it's too old, fetch fresh data
+        if df is None:
+            df = collector.get_historical_data(pair=pair, period='30d', interval=timeframe)
+            if not df.empty:
+                # Cache the fresh data
+                cache_manager.cache_data(cache_key, df)
+        
         if df.empty:
             return {}, {}, 'No data available.', 'No data available.', html.Div("No data available."), 'No data available.', 'No data available.', 'No data available.', 'No data available.'
         
@@ -318,11 +329,30 @@ def update_dashboard(pair, timeframe, n, n_clicks_calc, n_clicks_update, balance
         # Calculate indicators and identify trading points
         df = calculate_indicators(df)
         
-        # Get ML predictions and analysis
-        price_prediction = ml_models.predict_price(df)
-        market_regime = ml_models.classify_market_regime(df)
-        patterns = ml_models.detect_patterns(df)
-        anomalies = ml_models.detect_anomalies(df)
+        # Get ML predictions and analysis (with caching)
+        ml_cache_key = f"{pair}_{timeframe}_ml"
+        ml_data = cache_manager.get_cached_data(ml_cache_key, max_age_minutes=15)
+        
+        if ml_data is None:
+            price_prediction = ml_models.predict_price(df)
+            market_regime = ml_models.classify_market_regime(df)
+            patterns = ml_models.detect_patterns(df)
+            anomalies = ml_models.detect_anomalies(df)
+            
+            # Cache ML results
+            ml_results = {
+                'price_prediction': price_prediction,
+                'market_regime': market_regime,
+                'patterns': patterns,
+                'anomalies': anomalies
+            }
+            cache_manager.cache_data(ml_cache_key, pd.DataFrame([ml_results]))
+        else:
+            ml_results = ml_data.iloc[0].to_dict()
+            price_prediction = ml_results['price_prediction']
+            market_regime = ml_results['market_regime']
+            patterns = ml_results['patterns']
+            anomalies = ml_results['anomalies']
         
         # Create price prediction display
         if price_prediction:
