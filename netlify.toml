@@ -10,10 +10,22 @@
 [build.environment]
   PYTHON_VERSION = "3.11"
   PYTHONPATH = "src"
+  DASH_DEBUG = "false"
 
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["dash", "plotly"]
+  included_files = ["src/**/*"]
+
+[[redirects]]
+  from = "/_dash-*"
+  to = "/.netlify/functions/dash_app"
+  status = 200
+
+[[redirects]]
+  from = "/_dash-assets/*"
+  to = "/.netlify/functions/dash_app"
+  status = 200
 
 [[redirects]]
   from = "/*"
