@@ -1,53 +1,24 @@
-# Cryptocurrency Trading Dashboard with ML Analysis
+# Crypto Trading Dashboard
 
-A comprehensive cryptocurrency trading dashboard that combines technical analysis, machine learning predictions, and risk management tools for informed trading decisions.
+A real-time cryptocurrency trading dashboard with technical analysis, machine learning predictions, and risk management features.
 
 ## Features
 
-### Technical Analysis
-- Real-time price charts with multiple timeframes (1h, 15m, 5m)
-- Multiple technical indicators:
-  - Moving Averages (SMA, EMA)
-  - MACD with signal line and histogram
-  - RSI with overbought/oversold levels
-  - Bollinger Bands
-  - Stochastic Oscillator
-  - On-Balance Volume (OBV)
-- Entry and exit signals based on indicator combinations
-- Pattern recognition for common chart patterns
+- Real-time price charts with candlestick patterns
+- Technical indicators (RSI, MACD, Bollinger Bands, etc.)
+- Trading signals and entry/exit points
+- Risk management metrics
+- Machine learning predictions
+- Market regime analysis
+- Pattern recognition
+- Anomaly detection
 
-### Machine Learning Analysis
-- Price prediction using LSTM neural networks
-- Market regime classification
-- Anomaly detection for unusual price/volume behavior
-- Pattern recognition for technical patterns
-- Confidence scoring for all predictions
+## Local Development
 
-### Risk Management
-- Position size calculator
-- Stop-loss and take-profit suggestions
-- Risk-reward ratio calculator
-- Portfolio allocation recommendations
-- Risk metrics including:
-  - Volatility analysis
-  - Value at Risk (VaR)
-  - Maximum loss/profit calculations
-
-### Dashboard Features
-- Interactive charts with zoom and pan capabilities
-- Real-time data updates
-- Multiple timeframe analysis
-- Trading signals panel
-- Recent trading points display
-- Risk management panel
-- ML analysis panel
-
-## Installation
-
-1. Clone the repository:
+1. Create a virtual environment:
 ```bash
-git clone https://github.com/yourusername/crypto-trading-dashboard.git
-cd crypto-trading-dashboard
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
 2. Install dependencies:
@@ -60,85 +31,51 @@ pip install -r requirements.txt
 python src/visualization/dashboard.py
 ```
 
-4. Access the dashboard at `http://127.0.0.1:8050`
+4. Open your browser and navigate to: http://localhost:8050
 
-## Dependencies
+## Deployment
 
-- pandas>=1.3.0
-- numpy>=1.19.5
-- requests>=2.26.0
-- python-binance>=1.0.15
-- dash>=2.0.0
-- plotly>=5.3.1
-- ta>=0.7.0
-- scikit-learn>=0.24.2
-- tensorflow>=2.8.0
-- seaborn>=0.11.2
-- matplotlib>=3.4.3
+This project can be deployed for free on Render.com:
+
+1. Create a Render account at https://render.com
+2. Create a new Web Service
+3. Connect your GitHub repository
+4. Use the following settings:
+   - Name: crypto-trading-dashboard
+   - Environment: Python
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `gunicorn src.visualization.dashboard:server`
+   - Plan: Free
 
 ## Project Structure
 
 ```
-crypto-trading-dashboard/
-├── src/
-│   ├── collectors/
-│   │   └── crypto_collector.py
-│   ├── visualization/
-│   │   └── dashboard.py
-│   ├── ml_models.py
-│   └── risk_management.py
-├── requirements.txt
-└── README.md
+src/
+├── visualization/
+│   └── dashboard.py      # Main dashboard application
+├── collectors/
+│   └── crypto_collector.py  # Data collection module
+├── ml_models.py          # Machine learning models
+└── risk_management.py    # Risk management module
 ```
 
-## Usage
+## Dependencies
 
-1. Select a cryptocurrency pair from the dropdown menu
-2. Choose your preferred timeframe
-3. Use the risk management panel to:
-   - Set your account balance
-   - Define risk per trade
-   - Set stop-loss and take-profit levels
-4. Monitor the ML analysis panel for:
-   - Price predictions
-   - Market regime classification
-   - Pattern recognition
-   - Anomaly detection
-5. Use the trading signals panel to identify potential entry and exit points
+- Dash: Web application framework
+- Plotly: Interactive charts
+- Pandas: Data manipulation
+- TA: Technical analysis indicators
+- YFinance: Market data
+- Scikit-learn: Machine learning
+- Gunicorn: Production server
 
-## Features in Detail
+## License
 
-### Technical Analysis
-The dashboard provides comprehensive technical analysis tools:
-- Multiple timeframe analysis (1h, 15m, 5m)
-- Real-time candlestick charts
-- Technical indicators with customizable parameters
-- Entry/exit signals based on multiple indicators
-- Volume analysis
-
-### Machine Learning Features
-Advanced ML capabilities for enhanced trading decisions:
-- LSTM-based price prediction
-- Market regime classification (Bullish, Bearish, High Volatility, Sideways)
-- Pattern recognition for common chart patterns
-- Anomaly detection for unusual market behavior
-- Confidence scoring for all predictions
-
-### Risk Management
-Comprehensive risk management tools:
-- Position size calculation based on account balance and risk tolerance
-- Stop-loss and take-profit suggestions
-- Risk-reward ratio calculation
-- Portfolio allocation recommendations
-- Risk metrics including volatility and VaR
+MIT License
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Disclaimer
 
