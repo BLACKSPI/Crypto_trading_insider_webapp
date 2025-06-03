@@ -3,6 +3,7 @@
     python -m pip install --upgrade pip
     pip install -r requirements.txt
     mkdir -p data/cache
+    mkdir -p src/visualization/assets
   """
   publish = "src/visualization"
   functions = "netlify/functions"
@@ -11,26 +12,31 @@
   PYTHON_VERSION = "3.11"
   PYTHONPATH = "src"
   DASH_DEBUG = "false"
+  DASH_SERVE_DEV = "false"
 
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["dash", "plotly"]
   included_files = ["src/**/*"]
+  function_dir = "netlify/functions"
 
 [[redirects]]
   from = "/_dash-*"
   to = "/.netlify/functions/dash_app"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/_dash-assets/*"
   to = "/.netlify/functions/dash_app"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  force = true
 
 [dev]
   command = "python src/visualization/dashboard.py"
