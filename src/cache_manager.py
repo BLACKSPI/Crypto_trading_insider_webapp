@@ -23,40 +23,65 @@ class CacheManager:
     def get_cached_data(self, key, max_age_minutes=5):
         """Get cached data if it exists and is not too old"""
         cache_path = self._get_cache_path(key)
+        pickle_path = cache_path + '.pkl'
         
-        if not os.path.exists(cache_path):
-            return None
-            
-        try:
-            with open(cache_path, 'r') as f:
-                cache_data = json.load(f)
+        # Try pickle file first
+        if os.path.exists(pickle_path):
+            try:
+                df = pd.read_pickle(pickle_path)
+                file_time = datetime.fromtimestamp(os.path.getmtime(pickle_path))
+                if datetime.now() - file_time > timedelta(minutes=max_age_minutes):
+                    return None
+                return df
+            except Exception as e:
+                logger.error(f"Error reading pickle cache: {str(e)}")
+        
+        # Try JSON file
+        if os.path.exists(cache_path):
+            try:
+                with open(cache_path, 'r') as f:
+                    cache_data = json.load(f)
+                    
+                # Check if cache is too old
+                cache_time = datetime.fromisoformat(cache_data['timestamp'])
+                if datetime.now() - cache_time > timedelta(minutes=max_age_minutes):
+                    return None
+                    
+                # Convert data back to DataFrame
+                data_dict = cache_data['data']
+                df = pd.DataFrame.from_dict(data_dict, orient='index')
+                df.index = pd.to_datetime(df.index)
+                return df
                 
-            # Check if cache is too old
-            cache_time = datetime.fromisoformat(cache_data['timestamp'])
-            if datetime.now() - cache_time > timedelta(minutes=max_age_minutes):
+            except Exception as e:
+                logger.error(f"Error reading JSON cache: {str(e)}")
                 return None
-                
-            # Convert data back to DataFrame
-            df = pd.DataFrame(cache_data['data'])
-            df.index = pd.to_datetime(df.index)
-            return df
-            
-        except Exception as e:
-            logger.error(f"Error reading cache: {str(e)}")
-            return None
+        
+        return None
             
     def cache_data(self, key, df):
         """Cache DataFrame with timestamp"""
         cache_path = self._get_cache_path(key)
         
         try:
-            cache_data = {
-                'timestamp': datetime.now().isoformat(),
-                'data': df.to_dict(orient='dict')
-            }
+            # Save as pickle first (more reliable)
+            df.to_pickle(cache_path + '.pkl')
+            logger.info(f"Saved cache as pickle file: {cache_path}.pkl")
             
-            with open(cache_path, 'w') as f:
-                json.dump(cache_data, f)
+            # Also try to save as JSON
+            try:
+                data_dict = df.to_dict(orient='index')
+                cache_data = {
+                    'timestamp': datetime.now().isoformat(),
+                    'data': data_dict
+                }
+                
+                with open(cache_path, 'w') as f:
+                    json.dump(cache_data, f, default=str)
+                logger.info(f"Saved cache as JSON file: {cache_path}")
+                    
+            except Exception as json_error:
+                logger.warning(f"Could not save JSON cache: {str(json_error)}")
                 
         except Exception as e:
             logger.error(f"Error writing to cache: {str(e)}")

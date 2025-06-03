@@ -18,15 +18,20 @@ from risk_management import RiskManager
 from ml_models import CryptoMLModels
 from cache_manager import CacheManager
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+# Set up logging with more detailed configuration
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 # Initialize components
+logger.info("Initializing dashboard components...")
 collector = CryptoDataCollector()
 risk_manager = RiskManager()
 ml_models = CryptoMLModels()
 cache_manager = CacheManager()
+logger.info("Dashboard components initialized successfully")
 
 def identify_trading_points(df: pd.DataFrame) -> pd.DataFrame:
     """Identify entry and exit points based on technical indicators"""
@@ -309,31 +314,47 @@ app.layout = html.Div([
 )
 def update_dashboard(pair, timeframe, n, n_clicks_calc, n_clicks_update, balance, risk_percent, sl_percent, tp_percent):
     try:
+        logger.info(f"Updating dashboard for {pair} with {timeframe} timeframe")
+        
         # Try to get cached data first
         cache_key = f"{pair}_{timeframe}"
+        logger.debug(f"Attempting to get cached data for {cache_key}")
         df = cache_manager.get_cached_data(cache_key)
         
         # If no cached data or it's too old, fetch fresh data
         if df is None:
+            logger.info(f"No valid cache found for {cache_key}, fetching fresh data")
             df = collector.get_historical_data(pair=pair, period='30d', interval=timeframe)
             if not df.empty:
+                logger.info(f"Successfully fetched {len(df)} data points for {pair}")
                 # Cache the fresh data
                 cache_manager.cache_data(cache_key, df)
+                logger.debug(f"Cached fresh data for {cache_key}")
+            else:
+                logger.warning(f"No data received for {pair}")
         
         if df.empty:
+            logger.error(f"Empty dataframe for {pair}")
             return {}, {}, 'No data available.', 'No data available.', html.Div("No data available."), 'No data available.', 'No data available.', 'No data available.', 'No data available.'
         
         # Prepare data for ML models
+        logger.info("Preparing features for ML models")
         df = ml_models.prepare_features(df)
+        if df.empty:
+            logger.error("Feature preparation resulted in empty dataframe")
+            return {}, {}, 'Error preparing features.', 'Error preparing features.', html.Div("Error preparing features."), 'Error', 'Error', 'Error', 'Error'
         
         # Calculate indicators and identify trading points
+        logger.info("Calculating technical indicators")
         df = calculate_indicators(df)
         
         # Get ML predictions and analysis (with caching)
         ml_cache_key = f"{pair}_{timeframe}_ml"
+        logger.debug(f"Attempting to get cached ML results for {ml_cache_key}")
         ml_data = cache_manager.get_cached_data(ml_cache_key, max_age_minutes=15)
         
         if ml_data is None:
+            logger.info("No valid ML cache found, computing new predictions")
             price_prediction = ml_models.predict_price(df)
             market_regime = ml_models.classify_market_regime(df)
             patterns = ml_models.detect_patterns(df)
@@ -347,7 +368,9 @@ def update_dashboard(pair, timeframe, n, n_clicks_calc, n_clicks_update, balance
                 'anomalies': anomalies
             }
             cache_manager.cache_data(ml_cache_key, pd.DataFrame([ml_results]))
+            logger.debug(f"Cached ML results for {ml_cache_key}")
         else:
+            logger.info("Using cached ML results")
             ml_results = ml_data.iloc[0].to_dict()
             price_prediction = ml_results['price_prediction']
             market_regime = ml_results['market_regime']
@@ -778,8 +801,8 @@ def update_dashboard(pair, timeframe, n, n_clicks_calc, n_clicks_update, balance
                 price_prediction_display, market_regime_display, pattern_display, anomaly_display)
         
     except Exception as e:
-        logger.error(f"Dashboard error: {e}")
-        return {}, {}, f"Error: {e}", f"Error: {e}", html.Div(f"Error: {str(e)}"), 'Error', 'Error', 'Error', 'Error'
+        logger.error(f"Dashboard error: {str(e)}", exc_info=True)
+        return {}, {}, f"Error: {str(e)}", f"Error: {str(e)}", html.Div(f"Error: {str(e)}"), 'Error', 'Error', 'Error', 'Error'
 
 # Create server variable for deployment
 server = app.server

@@ -55,29 +55,36 @@ class CryptoDataCollector:
         for attempt in range(self.retry_count):
             try:
                 url = f"{self.base_url}/{endpoint}"
-                logger.info(f"Requesting {url}")
+                logger.info(f"Requesting {url} with params: {params}")
                 response = requests.get(url, params=params, timeout=10)
                 
                 if response.status_code == 200:
-                    return response.json()
+                    data = response.json()
+                    logger.info(f"Successfully received data from {endpoint}")
+                    return data
                 elif response.status_code == 429:
-                    logger.warning("Rate limit hit, waiting before retry...")
+                    logger.warning(f"Rate limit hit (attempt {attempt + 1}/{self.retry_count}), waiting before retry...")
                     time.sleep(self.retry_delay * 2)
                 else:
-                    logger.error(f"HTTP error: {response.status_code} - {response.text}")
+                    logger.error(f"HTTP error {response.status_code} for {endpoint}: {response.text}")
+            except requests.exceptions.Timeout:
+                logger.error(f"Timeout while requesting {endpoint}")
+            except requests.exceptions.ConnectionError:
+                logger.error(f"Connection error while requesting {endpoint}")
             except Exception as e:
-                logger.error(f"Exception during API request: {str(e)}")
+                logger.error(f"Exception during API request to {endpoint}: {str(e)}")
             
             if attempt < self.retry_count - 1:
-                logger.info(f"Retrying in {self.retry_delay} seconds...")
+                logger.info(f"Retrying {endpoint} in {self.retry_delay} seconds...")
                 time.sleep(self.retry_delay)
         
+        logger.error(f"Failed to get data from {endpoint} after {self.retry_count} attempts")
         return {}
 
     def get_historical_data(
         self,
         pair: str = 'BTCUSDT',
-        period: str = '5d',
+        period: str = '30d',
         interval: str = '1d',
         start_date: Optional[str] = None,
         end_date: Optional[str] = None
@@ -116,20 +123,35 @@ class CryptoDataCollector:
             try:
                 days = int(period.replace('d', ''))
             except Exception:
-                days = 5
+                days = 30
             start_time = int((datetime.now() - timedelta(days=days)).timestamp() * 1000)
         
-        params = {
-            'symbol': pair,
-            'interval': binance_interval,
-            'startTime': start_time,
-            'endTime': end_time,
-            'limit': 1000
-        }
+        # Fetch data in chunks to handle Binance's limit
+        all_data = []
+        current_end = end_time
         
-        data = self._make_api_request('klines', params)
-        if data:
-            df = pd.DataFrame(data, columns=[
+        while current_end > start_time:
+            params = {
+                'symbol': pair,
+                'interval': binance_interval,
+                'endTime': current_end,
+                'limit': 1000
+            }
+            
+            chunk_data = self._make_api_request('klines', params)
+            if not chunk_data:
+                break
+                
+            all_data.extend(chunk_data)
+            
+            # Update end time for next chunk
+            current_end = int(chunk_data[0][0])  # Use timestamp of first candle in chunk
+            
+            # Add a small delay to avoid rate limits
+            time.sleep(0.1)
+        
+        if all_data:
+            df = pd.DataFrame(all_data, columns=[
                 'timestamp', 'open', 'high', 'low', 'close', 'volume',
                 'close_time', 'quote_volume', 'trades', 'taker_buy_base',
                 'taker_buy_quote', 'ignore'
@@ -146,6 +168,9 @@ class CryptoDataCollector:
             # Add additional useful columns
             df['Returns'] = df['close'].pct_change()
             df['Log_Returns'] = np.log(df['close']/df['close'].shift(1))
+            
+            # Sort by timestamp to ensure correct order
+            df.sort_index(inplace=True)
             
             logger.info(f"Retrieved {len(df)} data points for {pair}")
             return df
